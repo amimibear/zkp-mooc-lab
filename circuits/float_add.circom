@@ -331,6 +331,31 @@ template MSNZB(b) {
     signal output one_hot[b];
 
     // TODO
+    assert(in > 0 || skip_checks);
+    component ls = LessThan(b);
+    ls.in[0] <== 0;
+    ls.in[1] <== in;
+
+    (1-ls.out)*(1-skip_checks) === 0;
+
+    component bits = Num2Bits(b);
+    bits.in <== in;
+    // bits.bits[]
+    // component bits[b] = Bit(b);
+
+    component or[b];
+    signal a[b+1];
+    a[b] <== 0;
+    for (var i = b-1; i >= 0; i--) {
+        or[i] = OR();
+        or[i].a <== bits.bits[i];
+        or[i].b <== a[i+1];
+        a[i] <== or[i].out;
+    }
+    for (var i = 0; i < b; i++) {
+        one_hot[i] <== a[i]-a[i+1];
+        // assert((2**i <= in && in < 2**(i+1)) || one_hot[i]==1);
+    }
 }
 
 /*
