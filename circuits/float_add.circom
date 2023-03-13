@@ -211,6 +211,24 @@ template RightShift(b, shift) {
     signal output y;
 
     // TODO
+    signal bits[b];
+    signal a[shift+1];
+    a[0] <== x;
+    for (var i = 0; i < b; i++) {
+        bits[i] <-- (x >> i) & 1;
+        bits[i] * (1 - bits[i]) === 0;
+        if (i < shift) {
+            a[i+1] <-- a[i]\2;
+            a[i] === a[i+1]*2 + bits[i];
+        }
+    }
+    var sum_of_bits = 0;
+    for (var i = 0; i < b; i++) {
+        sum_of_bits += (2 ** i) * bits[i];
+    }
+    sum_of_bits === x;
+    y <== a[shift];
+    
 }
 
 /*
