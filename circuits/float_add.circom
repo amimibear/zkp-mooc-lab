@@ -406,4 +406,93 @@ template FloatAdd(k, p) {
     signal output m_out;
 
     // TODO
+    component check_well_formedness[2];
+    for (var i = 0; i < 2; i++) {
+        check_well_formedness[i] = CheckWellFormedness(k, p);
+        check_well_formedness[i].e <== e[i];
+        check_well_formedness[i].m <== m[i];
+    }
+
+    signal e_left[2][p+2],mgn[2];
+    for (var i = 0; i < 2; i++) {
+        e_left[i][0] <== e[i];
+        for(var j = 0; j < p+1; j++) {
+            e_left[i][j+1] <== e_left[i][j]*2;
+        }
+        mgn[i] <== e_left[i][p+1] + m[i];
+    }
+    // log(mgn[0], mgn[1], p);
+    component ls;
+    ls = LessThan(2*p+2);
+    ls.in[0] <== mgn[0];
+    ls.in[1] <== mgn[1];
+    
+
+    component switcher[2];
+    signal alpha_e, alpha_m, beta_e, beta_m;
+    
+    switcher[0] = Switcher();
+    switcher[0].sel <== ls.out;
+    switcher[0].L <== e[0];
+    switcher[0].R <== e[1];
+    alpha_e <== switcher[0].outL;
+    beta_e <== switcher[0].outR;
+
+    switcher[1] = Switcher();
+    switcher[1].sel <== ls.out;
+    switcher[1].L <== m[0];
+    switcher[1].R <== m[1];
+    alpha_m <== switcher[1].outL;
+    beta_m <== switcher[1].outR;
+
+    signal diff <== alpha_e - beta_e;
+
+    signal m0,e0,m1,e1,m2,e2;
+
+    component ls2 = LessThan(p); // p?
+    ls2.in[0] <== p+1;
+    ls2.in[1] <== diff;
+
+    component is0 = IsZero();
+    is0.in <== alpha_e;
+
+    component or = OR();
+    or.a <== ls2.out;
+    or.b <== is0.out;
+
+    component leftshift = LeftShift(p+2);
+    leftshift.x <== alpha_m;
+    leftshift.shift <== diff;
+    leftshift.skip_checks <== or.out;
+
+    // log(or.out);
+
+    m0 <== leftshift.y + beta_m;
+    e0 <== beta_e;
+
+    component normalize = Normalize(k, p, 2*p+1);
+    normalize.e <== e0*(1-or.out);
+    normalize.m <== m0*(1-or.out);
+    normalize.skip_checks <== or.out;
+    e1 <== normalize.e_out;
+    m1 <== normalize.m_out;
+
+    component round_and_check = RoundAndCheck(k, p, 2*p+1);
+    round_and_check.e <== e1*(1-or.out);
+    round_and_check.m <== m1*(1-or.out);
+    e2 <== round_and_check.e_out;
+    m2 <== round_and_check.m_out;
+
+    component if_e = IfThenElse();
+    if_e.cond <== or.out;
+    if_e.L <== alpha_e;
+    if_e.R <== e2;
+    e_out <== if_e.out;
+
+    component if_m = IfThenElse();
+    if_m.cond <== or.out;
+    if_m.L <== alpha_m;
+    if_m.R <== m2;
+    m_out <== if_m.out;
+
 }
