@@ -294,7 +294,7 @@ template LeftShift(shift_bound) {
     // component is0 = IsZero();
     // is0.in <== shift;
 
-    component ls[2];
+    // component ls[2];
     // ls[0] = LessThan(13);
     // ls[0].in[0] <== 0;
     // ls[0].in[1] <== shift;
@@ -308,14 +308,19 @@ template LeftShift(shift_bound) {
     // ls[1].in[1] <== shift_bound;
     // (1-ls[1].out) * (1-skip_checks) === 0;
 
-    // signal a[shift_bound];
-    // a[0] <== x;
-
-    // for (var i = 0; i < shift_bound-1; i++) {
-    //     a[i+1] <== a[i]*2;
-    // }
-    // y === a[shift];
-    y <-- x << shift;
+    signal a[shift_bound+1],o[shift_bound+1];
+    component ise[shift_bound+1];
+    a[0] <== x;
+    o[0] <== 1;
+    for (var i = 0; i < shift_bound; i++) {
+        ise[i] = IsEqual();
+        ise[i].in[0] <== shift;
+        ise[i].in[1] <== i;
+        o[i+1] <== o[i] * (1-ise[i].out);
+        a[i+1] <== a[i] * (1+o[i+1]);
+    }
+    y <== a[shift_bound];
+    // y <-- x << shift;
 }
 
 /*
