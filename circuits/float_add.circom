@@ -284,7 +284,7 @@ template RoundAndCheck(k, p, P) {
  * Enforces 0 <= `shift` < `shift_bound`.
  * If `skip_checks` = 1, then we don't care about the output and the `shift_bound` constraint is not enforced.
  */
-template LeftShift(shift_bound) {
+template LeftShift0(shift_bound) {
     signal input x;
     signal input shift;
     signal input skip_checks;
@@ -321,6 +321,33 @@ template LeftShift(shift_bound) {
     }
     y <== a[shift_bound];
     // y <-- x << shift;
+}
+
+template LeftShift(shift_bound) {
+    signal input x;
+    signal input shift;
+    signal input skip_checks;
+    signal output y;
+
+    // TODO
+    assert(shift < shift_bound || skip_checks);
+    assert(shift >= 0 || skip_checks);
+
+    var l = 0;
+    while (shift_bound >= (1 << l)) {
+        l++;
+    }
+
+    component sft = Num2Bits(l);
+    sft.in <== shift;
+    // log(shift,l,shift_bound);
+
+    signal a[l+1];
+    a[0] <== x;
+    for (var i = 0; i < l; i++) {
+        a[i+1] <== a[i] + (a[i]*(1<<(1<<i)) - a[i]) * sft.bits[i];
+    }
+    y <== a[l];
 }
 
 /*
@@ -466,8 +493,8 @@ template FloatAdd(k, p) {
     or.b <== is0.out;
 
     component leftshift = LeftShift(p+2);
-    leftshift.x <== alpha_m;
-    leftshift.shift <== diff;
+    leftshift.x <== alpha_m*(1-or.out);
+    leftshift.shift <== diff*(1-or.out);
     leftshift.skip_checks <== or.out;
 
     // log(or.out);
